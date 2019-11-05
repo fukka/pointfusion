@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from logger import Logger 
 
 from Pointnet import PointNetfeat, STN3d, feature_transform_regularizer
-from MLP import MLP as MLP
+from MLP import MLP_Global as MLP_Global
 from dataloader import nuscenes_dataloader
 from utils import ResNet50Bottom, sampler, render_box, render_pcl, visualize_result, IoU
 
@@ -29,7 +29,7 @@ nusc_iters_per_epoch = int(len(nusc_set) / batch_size)
 
 num_epochs = 200
 
-model = MLP()
+model = MLP_Global()
 model.cuda()
 
 optimizer = torch.optim.Adam(model.parameters(), lr = 0.001)
