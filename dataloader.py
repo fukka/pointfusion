@@ -40,13 +40,14 @@ class nuscenes_dataloader(data.Dataset):
     self.training = training
     self.normalize = normalize
     self.batch_size = batch_size
-    self.data_path = "/data/sets/nuscenes"
+    self.data_path = "/home/fengjia/data/sets/nuscenes"
     self.nusc= NuScenes(version='v1.0-trainval', dataroot = self.data_path, verbose= True)
     self.explorer = NuScenesExplorer(self.nusc)
     self.classes = ('__background__', 
                            'pedestrian', 'barrier', 'trafficcone', 'bicycle', 'bus', 'car', 'construction', 'motorcycle', 'trailer', 'truck')
 
-    PATH = self.data_path + '/annotations_list.txt'
+    # PATH = self.data_path + '/annotations_list.txt'
+    PATH = self.data_path + '/car_pedestrian_annotations_list.txt'
 
     with open(PATH) as f:
         self.token = [x.strip() for x in f.readlines()]
@@ -55,6 +56,8 @@ class nuscenes_dataloader(data.Dataset):
   def __getitem__(self, index):
     # gather tokens and samples needed for data extraction
     tokens = self.token[index]
+    if len(tokens.split('_')) < 2:
+        print(tokens)
     im_token = tokens.split('_')[0]
     annotation_token = tokens.split('_')[1]
     
@@ -64,8 +67,8 @@ class nuscenes_dataloader(data.Dataset):
     lidar_token = sample['data']['LIDAR_TOP']
     
     # get the sample_data for the image batch
-    image_path = '/data/sets/nuscenes/' + image_name
-    img = imread('/data/sets/nuscenes/' + image_name)
+    #image_path = '/data/sets/nuscenes/' + image_name
+    img = imread('/home/fengjia/data/sets/nuscenes/' + image_name)
     im = np.array(img)
     
     # get ground truth boxes 

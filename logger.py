@@ -3,22 +3,24 @@ import tensorflow as tf
 import numpy as np
 import scipy.misc 
 from PIL import Image
-try:
-    from StringIO import StringIO  # Python 2.7
-except ImportError:
-    from io import BytesIO         # Python 3.x
-
+# try:
+#     from StringIO import StringIO  # Python 2.7
+# except ImportError:
+#     from io import BytesIO         # Python 3.x
+from io import BytesIO
 class Logger(object):
     
     def __init__(self, log_dir):
         """Create a summary writer logging to log_dir."""
-        self.writer = tf.summary.FileWriter(log_dir)
+        #self.writer = tf.summary.FileWriter(log_dir)
+        self.writer = tf.summary.create_file_writer(log_dir)
         self.img_summaries = []
 
     def scalar_summary(self, tag, value, step):
         """Log a scalar variable."""
         summary = tf.compat.v1.Summary(value=[tf.compat.v1.Summary.Value(tag=tag, simple_value=value)])
-        self.writer.add_summary(summary, step)
+        # self.writer.add_summary(summary, step)
+        tf.summary.write( tag, value, step)
 
     def image_summary(self, tag, images, step):
         """Log a list of images."""

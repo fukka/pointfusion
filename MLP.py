@@ -10,7 +10,7 @@ from utils import ResNet50Bottom
 
 class MLP_Global(nn.Module):
     def __init__(self):
-        super(MLP, self).__init__()
+        super(MLP_Global, self).__init__()
         self.pointNet = PointNetfeat(global_feat = True, feature_transform= False)
         self.res50_model = models.resnet50(pretrained=True)
         self.res50_conv2 = ResNet50Bottom(self.res50_model)

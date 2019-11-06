@@ -9,7 +9,7 @@ from logger import Logger
 from Pointnet import PointNetfeat, STN3d, feature_transform_regularizer
 from MLP import MLP_Global as MLP_Global
 from dataloader import nuscenes_dataloader
-from utils import ResNet50Bottom, sampler, render_box, render_pcl, visualize_result, IoU
+# from utils import ResNet50Bottom, sampler, render_box, render_pcl, visualize_result, IoU
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -22,9 +22,9 @@ logger = Logger('./logs/4')
 nusc_classes = ['__background__', 
                            'pedestrian', 'barrier', 'trafficcone', 'bicycle', 'bus', 'car', 'construction', 'motorcycle', 'trailer', 'truck']
 batch_size = 4             
-nusc_sampler_batch = sampler(400, 2)
+# nusc_sampler_batch = sampler(400, 2)
 nusc_set = nuscenes_dataloader(batch_size, len(nusc_classes), training = True)
-nusc_dataloader = torch.utils.data.DataLoader(nusc_set, batch_size = batch_size, sampler = nusc_sampler_batch)
+nusc_dataloader = torch.utils.data.DataLoader(nusc_set, batch_size = batch_size, shuffle=True)
 nusc_iters_per_epoch = int(len(nusc_set) / batch_size)
 
 num_epochs = 200

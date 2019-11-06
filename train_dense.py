@@ -9,7 +9,7 @@ from logger import Logger
 from Pointnet import PointNetfeat, STN3d, feature_transform_regularizer
 from MLP import MLP_Dense as MLP_Dense
 from dataloader import nuscenes_dataloader
-from utils import ResNet50Bottom, sampler, render_box, render_pcl, visualize_result, IoU
+from utils import ResNet50Bottom, sampler, render_box, render_pcl, visualize_result
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -29,7 +29,8 @@ nusc_iters_per_epoch = int(len(nusc_set) / batch_size)
 
 num_epochs = 50
 
-model = MLP_Dense(k = 1, feature_transform = False)
+#model = MLP_Dense(k = 1, feature_transform = False)
+model = MLP_Dense()
 model.cuda()
 optimizer = torch.optim.Adam(model.parameters(), lr = 0.001, betas=(0.9, 0.999))
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = 20, gamma=0.5)

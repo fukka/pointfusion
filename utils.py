@@ -70,7 +70,9 @@ def get_pointcloud(nusc, bottom_left, top_right, box, pointsensor_token: str, ca
    sample_rec = explorer.nusc.get('sample', pointsensor['sample_token'])
    chan = pointsensor['channel']
    ref_chan = 'LIDAR_TOP'
-   pc, times = LidarPointCloud.from_file_multisweep(nusc, sample_rec, chan, ref_chan, nsweeps = 10)
+   # pc, times = LidarPointCloud.from_file_multisweep(nusc, sample_rec, chan, ref_chan, nsweeps = 10)
+   file_name = osp.join(nusc.dataroot, nusc.get('sample_data', sample_rec['data'][chan])['filename'])
+   pc = LidarPointCloud.from_file(file_name)
    data_path, boxes, camera_intrinsic = nusc.get_sample_data(pointsensor_token, selected_anntokens=[box.token])
    pcl_box = boxes[0]
    

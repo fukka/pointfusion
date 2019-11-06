@@ -31,7 +31,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from utils import get_pointcloud 
 
 import cv2 
-data_path = "/data/sets/nuscenes"
+data_path = "/home/fengjia/data/sets/nuscenes"
 
 nusc= NuScenes(version='v1.0-trainval', dataroot = data_path, verbose= True)
 explorer = NuScenesExplorer(nusc)
@@ -89,6 +89,6 @@ for im_token in image_token:
     counter = counter + 1
 
 print("Saving...")
-with open('/data/sets/nuscenes/car_pedestrian_annotations_list.txt', 'w') as f:
+with open('/home/fengjia/data/sets/nuscenes/car_pedestrian_annotations_list.txt', 'w') as f:
     for item in annotations:
         f.write("%s\n" % item)
