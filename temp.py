@@ -8,6 +8,44 @@ from nuscenes.utils.data_classes import LidarPointCloud
 from nuscenes.utils.geometry_utils import BoxVisibility
 # import matplotlib.pyplot as plt
 
+
+
+def draw_box_matlab(ax, corners, color):
+	for i in range(4):
+		ax.plot([corners.T[i][0], corners.T[i + 4][0]],
+		        [corners.T[i][1], corners.T[i + 4][1]],
+		        color=color[2], linewidth=2)
+
+	def draw_rect(selected_corners, color):
+		prev = selected_corners[-1]
+		for corner in selected_corners:
+			ax.plot([prev[0], corner[0]], [prev[1], corner[1]], color=color, linewidth=2)
+			prev = corner
+
+	draw_rect(corners.T[:4], color[0])
+	draw_rect(corners.T[4:], color[1])
+
+
+def draw_box_cv2(image, corners, color):
+	for i in range(4):
+		start_point = (int(corners.T[i][0]), int(corners.T[i][1]))
+		end_point = (int(corners.T[i + 4][0]), int(corners.T[i + 4][1]))
+		cv2.line(image, start_point, end_point, color[2][::-1], 2)
+
+	def draw_rect(selected_corners, color):
+		prev = selected_corners[-1]
+		for corner in selected_corners:
+			start_point = (int(prev[0]), int(prev[1]))
+			end_point = (int(corner[0]), int(corner[1]))
+			cv2.line(image, start_point, end_point, color, 2)
+			prev = corner
+
+	draw_rect(corners.T[:4], color[0][::-1])
+	draw_rect(corners.T[4:], color[1][::-1])
+	return image
+
+
+
 def show_annotation(nusc, sample_data_token):
 	data_path, boxes, camera_intrinsic = nusc.get_sample_data(sample_data_token, box_vis_level=BoxVisibility.ANY)
 	data = Image.open(data_path)
@@ -17,19 +55,21 @@ def show_annotation(nusc, sample_data_token):
 		corners = view_points(box.corners(), camera_intrinsic, normalize=True)[:2, :]
 		c = np.array(nusc.explorer.get_color(box.name)) / 255.0
 		color = (c, c, c)
-		for i in range(4):
-			ax.plot([corners.T[i][0], corners.T[i + 4][0]],
-					[corners.T[i][1], corners.T[i + 4][1]],
-					color=color[2], linewidth=2)
-
-		def draw_rect(selected_corners, color):
-			prev = selected_corners[-1]
-			for corner in selected_corners:
-				ax.plot([prev[0], corner[0]], [prev[1], corner[1]], color=color, linewidth=2)
-				prev = corner
-
-		draw_rect(corners.T[:4], color[0])
-		draw_rect(corners.T[4:], color[1])
+		draw_box_matlab(ax, corners, color)
+		#
+		# for i in range(4):
+		# 	ax.plot([corners.T[i][0], corners.T[i + 4][0]],
+		# 			[corners.T[i][1], corners.T[i + 4][1]],
+		# 			color=color[2], linewidth=2)
+		#
+		# def draw_rect(selected_corners, color):
+		# 	prev = selected_corners[-1]
+		# 	for corner in selected_corners:
+		# 		ax.plot([prev[0], corner[0]], [prev[1], corner[1]], color=color, linewidth=2)
+		# 		prev = corner
+		#
+		# draw_rect(corners.T[:4], color[0])
+		# draw_rect(corners.T[4:], color[1])
 
 def show_annotation_cv2(nusc, sample_data_token):
 	data_path, boxes, camera_intrinsic = nusc.get_sample_data(sample_data_token, box_vis_level=BoxVisibility.ANY)
@@ -44,21 +84,22 @@ def show_annotation_cv2(nusc, sample_data_token):
 			continue
 		c = nusc.explorer.get_color(box.name)
 		color = (c, c, c)
-		for i in range(4):
-			start_point = (int(corners.T[i][0]), int(corners.T[i][1]))
-			end_point = (int(corners.T[i + 4][0]), int(corners.T[i + 4][1]))
-			cv2.line(image, start_point, end_point, color[2][::-1], 2)
-
-		def draw_rect(selected_corners, color):
-			prev = selected_corners[-1]
-			for corner in selected_corners:
-				start_point = (int(prev[0]), int(prev[1]))
-				end_point = (int(corner[0]), int(corner[1]))
-				cv2.line(image, start_point, end_point, color, 2)
-				prev = corner
-
-		draw_rect(corners.T[:4], color[0][::-1])
-		draw_rect(corners.T[4:], color[1][::-1])
+		image = draw_box_cv2(image, corners, color)
+		# for i in range(4):
+		# 	start_point = (int(corners.T[i][0]), int(corners.T[i][1]))
+		# 	end_point = (int(corners.T[i + 4][0]), int(corners.T[i + 4][1]))
+		# 	cv2.line(image, start_point, end_point, color[2][::-1], 2)
+		#
+		# def draw_rect(selected_corners, color):
+		# 	prev = selected_corners[-1]
+		# 	for corner in selected_corners:
+		# 		start_point = (int(prev[0]), int(prev[1]))
+		# 		end_point = (int(corner[0]), int(corner[1]))
+		# 		cv2.line(image, start_point, end_point, color, 2)
+		# 		prev = corner
+		#
+		# draw_rect(corners.T[:4], color[0][::-1])
+		# draw_rect(corners.T[4:], color[1][::-1])
 	cv2.imwrite('img.jpg', image)
 	return image
 
