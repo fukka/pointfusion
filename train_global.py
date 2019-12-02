@@ -42,21 +42,21 @@ im = torch.FloatTensor(1)
 points = torch.FloatTensor(1)
 offset = torch.FloatTensor(1)
 m = torch.FloatTensor(1)
-rot_matrix = torch.FloatTensor(1)
+# rot_matrix = torch.FloatTensor(1)
 gt_corners = torch.FloatTensor(1)
 
 im = im.cuda()
 points = points.cuda()
 offset = offset.cuda()
 m = m.cuda()
-rot_matrix = rot_matrix.cuda()
+# rot_matrix = rot_matrix.cuda()
 gt_corners = gt_corners.cuda()
 
 im = Variable(im)
 points = Variable(points)
 offset = Variable(offset)
 m = Variable(m)
-rot_matrix = Variable(rot_matrix)
+# rot_matrix = Variable(rot_matrix)
 gt_corners = Variable(gt_corners)
 
 date = '2019_11_10__1'
@@ -81,22 +81,8 @@ for epoch in range(1, num_epochs + 1):
             points.resize_(data[1].size()).copy_(data[1])
             offset.resize_(data[2].size()).copy_(data[2])
             m.resize_(data[3].size()).copy_(data[3])
-            rot_matrix.resize_(data[4].size()).copy_(data[4])
+            # rot_matrix.resize_(data[4].size()).copy_(data[4])
             gt_corners.resize_(data[5].size()).copy_(data[5])
-            # print(im)
-            # im_np = im.cpu().numpy()
-            # print(im_np)
-            # print(im_np.shape)
-            # img = np.zeros((128, 128, 3))
-            # for u in range(128):
-            #     for v in range(128):
-            #         img[u, v, :] = im_np[1, :,u, v]
-            # img[:,:,:] = im_np[0,:,:,:]
-            # img_f = np.zeros(())
-            # img = img.reshape((128, 128, 3))
-            # cv2.imshow('img', img)
-            # cv2.waitKey(0)
-            # exit()
         boxes, classes = model(im, points)
         loss = 0
         n = 400
