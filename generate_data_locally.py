@@ -112,6 +112,9 @@ if __name__ == '__main__':
             dep = np.zeros((u, v))
             for i in range(len(pcl_in2d[0])):
                 dep[pcl_in2d[0, i]-bottom_left[1], pcl_in2d[1, i]-bottom_left[1]] = pcl_in2d[i, 2]
+
+            dep = cv2.resize(dep, (128, 128))
+
             np.save(os.path.join(save_path, 'img_{}'.format(counter)), im)
             np.save(os.path.join(save_path, 'dep_{}'.format(counter)), dep)
             np.save(os.path.join(save_path, 'originalGT_{}'.format(counter)), ori_corners)

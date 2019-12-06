@@ -8,7 +8,7 @@ from logger import Logger
 
 from Pointnet import PointNetfeat, STN3d, feature_transform_regularizer
 from MLP import MLP_Dense as MLP_Dense
-from dataloader import nuscenes_dataloader
+from dataloader import local_dataloader
 from utils import ResNet50Bottom, sampler, render_box, render_pcl, visualize_result
 
 import matplotlib.pyplot as plt
@@ -24,7 +24,7 @@ nusc_classes = ['__background__',
                 'trailer', 'truck']
 
 batch_size = 4
-nusc_set = nuscenes_dataloader(batch_size, len(nusc_classes), training=True)
+nusc_set = local_dataloader(batch_size, len(nusc_classes), training=True)
 nusc_dataloader = torch.utils.data.DataLoader(nusc_set, batch_size=batch_size, shuffle=True)
 nusc_iters_per_epoch = int(len(nusc_set) / batch_size)
 
@@ -38,19 +38,21 @@ scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
 
 regressor = nn.SmoothL1Loss(reduction='none')
 
-im = torch.FloatTensor(1).cuda()
-points = torch.FloatTensor(1).cuda()
-offset = torch.FloatTensor(1).cuda()
-m = torch.FloatTensor(1).cuda()
-rot_matrix = torch.FloatTensor(1).cuda()
-gt_corners = torch.FloatTensor(1).cuda()
+img = np.load(self.img_list[index])
+        dep = np.load(self.dep_list[index])
+        originalGT = np.load(self.originalGT_list[index])
+        shiftedGT = np.load(self.shiftedGT_list[index])
+img = torch.FloatTensor(1).cuda()
+dep = torch.FloatTensor(1).cuda()
+originalGT = torch.FloatTensor(1).cuda()
+shiftedGT = torch.FloatTensor(1).cuda()
 
-im = Variable(im)
-points = Variable(points)
-offset = Variable(offset)
-m = Variable(m)
-rot_matrix = Variable(rot_matrix)
-gt_corners = Variable(gt_corners)
+
+img = Variable(img)
+dep = Variable(dep)
+originalGT = Variable(originalGT)
+shiftedGT = Variable(shiftedGT)
+
 
 date = '08_28_2019__2'
 
@@ -67,22 +69,20 @@ for epoch in range(1, num_epochs + 1):
     for step in range(nusc_iters_per_epoch):
         data = next(nusc_iter)
         with torch.no_grad():
-            im.resize_(data[0].size()).copy_(data[0])
-            points.resize_(data[1].size()).copy_(data[1])
-            offset.resize_(data[2].size()).copy_(data[2])
-            m.resize_(data[3].size()).copy_(data[3])
-            rot_matrix.resize_(data[4].size()).copy_(data[4])
-            gt_corners.resize_(data[5].size()).copy_(data[5])
+            img.resize_(data[0].size()).copy_(data[0])
+            dep.resize_(data[1].size()).copy_(data[1])
+            originalGT.resize_(data[2].size()).copy_(data[2])
+            shiftedGT.resize_(data[3].size()).copy_(data[3])
 
         optimizer.zero_grad()
         model = model.train()
-        pred_offset, scores = model(im, points)
+        pred_offset, scores = model(img, dep)
 
         loss = 0
         n = 400
 
         # Unsupervised loss
-        loss = regressor(pred_offset, offset).mean(dim=(2, 3)) * scores - 0.1 * torch.log(scores)
+        loss = regressor(pred_offset, shiftedGT).mean(dim=(2, 3)) * scores - 0.1 * torch.log(scores)
         loss = loss.sum(dim=1) / n
         loss = loss.sum(dim=0) / batch_size
 
@@ -99,8 +99,8 @@ for epoch in range(1, num_epochs + 1):
         truth_boxes = np.zeros((4, 8, 3))
         for i in range(0, 4):
             p_offset[i] = pred_offset[i][max_inds[i]].cpu().detach().numpy()
-            anchor_points[i] = (points.cpu().numpy().transpose((0, 2, 1)))[i][max_inds[i]]
-            truth_boxes[i] = gt_corners[i].cpu().numpy()
+            # anchor_points[i] = (points.cpu().numpy().transpose((0, 2, 1)))[i][max_inds[i]]
+            truth_boxes[i] = shiftedGT[i].cpu().numpy()
 
         # visualize_result(p_offset, anchor_points, truth_boxes)
         if step % 10 == 0 and step != 0:

@@ -5,7 +5,7 @@ import pdb
 import numpy as np
 
 from Pointnet import PointNetfeat, STN3d
-import torchvision.models as models
+import orchvision.modelst as models
 from utils import ResNet50Bottom
 
 class MLP_Global(nn.Module):
@@ -107,4 +107,59 @@ class MLP_Dense(nn.Module):
         s_range = s_range.view(batch_size,-1)
         scores = scores/s_range 
         
+        return offset, scores
+
+
+class Fusion(nn.Module):
+    def __init__(self):
+        super(MLP_Dense, self).__init__()
+        self.pointNet = PointNetfeat(global_feat=True, feature_transform=False)
+        self.img_model = models.resnet50(pretrained=True)
+        self.img_conv2 = ResNet50Bottom(self.img_model)
+
+        self.dep_model = models.resnet50(pretrained=True)
+        self.dep_conv2 = ResNet50Bottom(self.dep_model)
+
+        self.fc1 = nn.Linear(3136, 512)
+        self.fc2 = nn.Linear(512, 128)
+        self.fc3 = nn.Linear(128, 128)
+        self.fc4 = nn.Linear(128, 8 * 3)  # 8*3 for 3D bounding box coordinates
+        self.fc5 = nn.Linear(128, 1)
+
+        self.apply(weights_init)
+
+    def forward(self, img, dep):
+        batch_size = img.size()[0]
+
+        imgfeat = self.img_conv2(img).view(batch_size, 1, 2048)
+        depfeat = self.dep_conv2(dep).view(batch_size, 1, 2048)
+
+        imgfeat = F.normalize(imgfeat, p=2, dim=2)
+        depfeat = F.normalize(depfeat, p=2, dim=2)
+
+        # fusion
+        fusionfeat = torch.cat((imgfeat, depfeat), 2)  # 180
+
+        x = fusionfeat
+        x = self.fc1(x)
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+        offset = self.fc4(x)
+        offset = offset.view(batch_size, 8, 3)
+        scores = self.fc5(x)
+        scores = scores.view(-1, 1)
+
+        # Shift scores so minimum is 0
+        minimum = (scores.min(dim=1)[0]).view(batch_size, -1)
+        scores = scores - minimum
+
+        # Add eps to prevent returning 0
+        eps = 1e-4
+        scores = scores + eps
+
+        # Divide by range to normalize
+        s_range = scores.max(dim=1)[0] - scores.min(dim=1)[0]
+        s_range = s_range.view(batch_size, -1)
+        scores = scores / s_range
+
         return offset, scores
