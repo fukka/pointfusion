@@ -157,10 +157,10 @@ def get_pointcloud(nusc, bottom_left, top_right, box, pointsensor_token: str, ca
    reverse_matrix = rotation_matrix(normal, -theta)
 
    # Sample 400 points
-   if np.shape(new_pts)[0]>400:
-      mask = np.random.choice(points.shape[0], 400, replace=False)
-      points = points[mask, :]
-      original_points= original_points[mask, :]
+   # if np.shape(new_pts)[0]>400:
+   #    mask = np.random.choice(points.shape[0], 400, replace=False)
+   #    points = points[mask, :]
+   #    original_points= original_points[mask, :]
 
    shift = np.expand_dims(np.mean(points, axis = 0), 0)
    points = points - shift # center

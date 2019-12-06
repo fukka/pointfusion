@@ -35,7 +35,7 @@ import cv2
 
 if __name__ == '__main__':
     data_path = "/home/fengjia/data/sets/nuscenes"
-    save_path = "/home/fengjia/data/sets/nuscenes"
+    save_path = "/home/fengjia/data/sets/nuscenes_local"
     if not os.path.isdir(save_path):
         print('save path not exist')
         exit(0)
@@ -60,14 +60,14 @@ if __name__ == '__main__':
         lidar_token = sample['data']['LIDAR_TOP']
 
         # get ground truth boxes
-        _, boxes, camera_intrinsic = nusc.get_sample_data(im_token, box_vis_level=BoxVisibility.ALL)
+        _, boxes, img_camera_intrinsic = nusc.get_sample_data(im_token, box_vis_level=BoxVisibility.ALL)
 
         for box in boxes:
             visibility_token = nusc.get('sample_annotation', box.token)['visibility_token']
             vis_level = int(nusc.get('visibility', visibility_token)['token'])
             if (vis_level != 3) and (vis_level != 4):
                 continue
-            ori_corners = view_points(box.corners(), view=camera_intrinsic, normalize=True)
+            ori_corners = view_points(box.corners(), view=np.array(img_camera_intrinsic, copy=True), normalize=True)
             if not(((ori_corners[0].max() - ori_corners[0].min()) > 64) and (
                     (ori_corners[1].max() - ori_corners[1].min()) > 64)):
                 continue
@@ -103,21 +103,21 @@ if __name__ == '__main__':
             crop_img /= 255
 
             # Get corresponding point cloud for the crop
-            pcl, m, offset, camera_intrinsic, box_corners = get_pointcloud(nusc, bottom_left, top_right, box,
-                                                                           lidar_token, im_token)
+            points, depth, im_ = explorer.map_pointcloud_to_image(lidar_token, im_token)
 
             u, v = im.shape[:2]
-
-            pcl_in2d = view_points(pcl, camera_intrinsic, normalize=True)
             dep = np.zeros((u, v))
-            for i in range(len(pcl_in2d[0])):
-                dep[pcl_in2d[0, i]-bottom_left[1], pcl_in2d[1, i]-bottom_left[1]] = pcl_in2d[i, 2]
-
+            for i in range(points.shape[1]):
+                if points[1, i] > bottom_left[1] and points[1, i] < top_right[1]-1 and points[0, i] > bottom_left[0] and points[0, i] < top_right[0]-1:
+                    dep[int(points[1, i]-bottom_left[1]), int(points[0, i]-bottom_left[0])] = depth[i]
+            if np.count_nonzero(dep) < 100:
+                continue
             dep = cv2.resize(dep, (128, 128))
 
             np.save(os.path.join(save_path, 'img_{}'.format(counter)), im)
             np.save(os.path.join(save_path, 'dep_{}'.format(counter)), dep)
             np.save(os.path.join(save_path, 'originalGT_{}'.format(counter)), ori_corners)
             np.save(os.path.join(save_path, 'shiftedGT_{}'.format(counter)), shifted_corners)
+            print('saving number {}'.format(counter))
             counter += 1
     print(counter)
