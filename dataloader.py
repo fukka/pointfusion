@@ -132,15 +132,14 @@ class local_dataloader(data.Dataset):
         self.originalGT_list = []
         self.shiftedGT_list = []
 
-        data_path = r''
+        data_path = r'/home/fengjia/data/sets/nuscenes_local'
         img_list = glob.glob(os.path.join(data_path, 'img_*'))
         for img in img_list:
             if (not os.path.isfile(img.replace('img', 'dep')) or (not os.path.isfile(img.replace('img', 'originalGT'))) or (not os.path.isfile(img.replace('img', 'shiftedGT')))):
-                self.data_list.remove(img)
                 print(img)
                 continue
             self.img_list.append(img)
-            self.dep_list.append(img.replace('img', 'originalGT'))
+            self.dep_list.append(img.replace('img', 'dep'))
             self.originalGT_list.append(img.replace('img', 'originalGT'))
             self.shiftedGT_list.append(img.replace('img', 'shiftedGT'))
 
@@ -150,7 +149,9 @@ class local_dataloader(data.Dataset):
         dep = np.load(self.dep_list[index])
         originalGT = np.load(self.originalGT_list[index])
         shiftedGT = np.load(self.shiftedGT_list[index])
+        originalGT = originalGT.transpose((1, 0))
+        shiftedGT = shiftedGT.transpose((1, 0))
         return img, dep, originalGT, shiftedGT
 
     def __len__(self):
-        return len(self.token)
+        return len(self.img_list)

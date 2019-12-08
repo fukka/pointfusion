@@ -39,13 +39,13 @@ data_path = "/home/fengjia/data/sets/nuscenes"
 nusc = NuScenes(version='v1.0-trainval', dataroot=data_path, verbose=True)
 explorer = NuScenesExplorer(nusc)
 
-# PATH = data_path + '/CAMFRONT.txt'
-PATH = data_path + '/CAMALL.txt'
+PATH = data_path + '/CAMFRONT.txt'
+# PATH = data_path + '/CAMALL.txt'
 
 with open(PATH) as f:
     image_token = [x.strip() for x in f.readlines()]
 
-image_token = image_token[:1000]
+# image_token = image_token[:1000]
 annotations = []
 counter = 0
 # pdb.set_trace()
@@ -65,7 +65,8 @@ for im_token in image_token:
             # print(vis_level)
             visible = True
         else:
-            visible = False
+            continue
+            # visible = False
         corners = view_points(box.corners(), view=camera_intrinsic, normalize=True)
         if (visible == True) and ((corners[0].max() - corners[0].min()) > 64) and (
                 (corners[1].max() - corners[1].min()) > 64):
@@ -88,7 +89,8 @@ for im_token in image_token:
             pcl, _, _, _, _ = get_pointcloud(nusc, bottom_left, top_right, box, lidar_token, im_token)
             # print('pcl shape ', pcl.shape)
             # print(np.shape(pcl)[1])
-            if len(pcl) != 0 and np.shape(pcl)[1] == 400:
+            # if len(pcl) != 0 and np.shape(pcl)[1] == 400:
+            if len(pcl) != 0 and np.shape(pcl)[1] == 20:
                 annotation_token = box.token
                 annotations = annotations + [im_token + "_" + annotation_token]
                 counter = counter + 1

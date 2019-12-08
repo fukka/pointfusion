@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm 
 from mpl_toolkits.mplot3d import Axes3D
 
-from utils import get_pointcloud 
+# from utils import get_pointcloud, modified_map_pointcloud_to_image
 
 import cv2 
 
@@ -50,6 +50,8 @@ if __name__ == '__main__':
 
     annotations = []
     counter = 0
+    max_v = 0
+    min_v = 999999
     # pdb.set_trace()
     for im_token in image_token:
         sample_data = nusc.get('sample_data', im_token)
@@ -61,7 +63,6 @@ if __name__ == '__main__':
 
         # get ground truth boxes
         _, boxes, img_camera_intrinsic = nusc.get_sample_data(im_token, box_vis_level=BoxVisibility.ALL)
-
         for box in boxes:
             visibility_token = nusc.get('sample_annotation', box.token)['visibility_token']
             vis_level = int(nusc.get('visibility', visibility_token)['token'])
@@ -96,26 +97,63 @@ if __name__ == '__main__':
             crop_img = im[bottom_left[1]:top_right[1], bottom_left[0]:top_right[0]]
 
             # Scale to same size
-            scale = 128 / side
-            scaled = cv2.resize(crop_img, (128, 128))
+            size = 256
+            scale = size / side
+            scaled = cv2.resize(crop_img, (size, size))
             crop_img = np.transpose(scaled, (2, 0, 1))
             crop_img = crop_img.astype(np.float32)
             crop_img /= 255
 
+
+            crop_img[0, :, :] = (crop_img[0, :, :] - np.mean(crop_img[0, :, :])) / np.std(crop_img[0, :, :])
+            crop_img[1, :, :] = (crop_img[1, :, :] - np.mean(crop_img[1, :, :])) / np.std(crop_img[1, :, :])
+            crop_img[2, :, :] = (crop_img[2, :, :] - np.mean(crop_img[2, :, :])) / np.std(crop_img[2, :, :])
+            crop_img[0, :, :] = (crop_img[0, :, :] * 0.229) + 0.485
+            crop_img[1, :, :] = (crop_img[1, :, :] * 0.224) + 0.456
+            crop_img[2, :, :] = (crop_img[2, :, :] * 0.225) + 0.406
+
             # Get corresponding point cloud for the crop
             points, depth, im_ = explorer.map_pointcloud_to_image(lidar_token, im_token)
-
             u, v = im.shape[:2]
             dep = np.zeros((u, v))
+
+            min_d = 1.5
+            max_d = 104.5
             for i in range(points.shape[1]):
                 if points[1, i] > bottom_left[1] and points[1, i] < top_right[1]-1 and points[0, i] > bottom_left[0] and points[0, i] < top_right[0]-1:
-                    dep[int(points[1, i]-bottom_left[1]), int(points[0, i]-bottom_left[0])] = depth[i]
-            if np.count_nonzero(dep) < 100:
-                continue
-            dep = cv2.resize(dep, (128, 128))
+                    normalized_depth = (depth[i] - min_d) / (max_d - min_d)
+                    dep[int(points[1, i]-bottom_left[1]), int(points[0, i]-bottom_left[0])] = normalized_depth
+                    if normalized_depth > max_v:
+                        max_v = normalized_depth
+                    if normalized_depth < min_v:
+                        min_v = normalized_depth
 
-            np.save(os.path.join(save_path, 'img_{}'.format(counter)), im)
-            np.save(os.path.join(save_path, 'dep_{}'.format(counter)), dep)
+            if np.count_nonzero(dep) < 400:
+                continue
+
+            dep = cv2.resize(dep, (size, size))
+            crop_dep = np.zeros((3, size, size))
+            crop_dep[0, :, :] = dep[:, :]
+            crop_dep[1, :, :] = dep[:, :]
+            crop_dep[2, :, :] = dep[:, :]
+            # dep = np.transpose(dep, (2, 0, 1))
+            if counter > 2000:
+                exit(0)
+                counter += 1
+                continue
+
+
+            crop_dep[0, :, :] = (crop_dep[0, :, :] - np.mean(crop_dep[0, :, :])) / np.std(crop_dep[0, :, :])
+            crop_dep[1, :, :] = (crop_dep[1, :, :] - np.mean(crop_dep[1, :, :])) / np.std(crop_dep[1, :, :])
+            crop_dep[2, :, :] = (crop_dep[2, :, :] - np.mean(crop_dep[2, :, :])) / np.std(crop_dep[2, :, :])
+            crop_dep[0, :, :] = (crop_dep[0, :, :] * 0.229) + 0.485
+            crop_dep[1, :, :] = (crop_dep[1, :, :] * 0.224) + 0.456
+            crop_dep[2, :, :] = (crop_dep[2, :, :] * 0.225) + 0.406
+            print('min_v, max_v', min_v, max_v)
+            print('mean, std',crop_img.mean(), crop_img.std())
+            print('mean, std',crop_dep.mean(), crop_dep.std())
+            np.save(os.path.join(save_path, 'img_{}'.format(counter)), crop_img)
+            np.save(os.path.join(save_path, 'dep_{}'.format(counter)), crop_dep)
             np.save(os.path.join(save_path, 'originalGT_{}'.format(counter)), ori_corners)
             np.save(os.path.join(save_path, 'shiftedGT_{}'.format(counter)), shifted_corners)
             print('saving number {}'.format(counter))

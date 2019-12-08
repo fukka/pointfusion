@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from logger import Logger
 
 from Pointnet import PointNetfeat, STN3d, feature_transform_regularizer
-from MLP import MLP_Dense as MLP_Dense
+from MLP import Fusion as MLP_Dense
 from dataloader import local_dataloader
 from utils import ResNet50Bottom, sampler, render_box, render_pcl, visualize_result
 
@@ -38,10 +38,6 @@ scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
 
 regressor = nn.SmoothL1Loss(reduction='none')
 
-img = np.load(self.img_list[index])
-        dep = np.load(self.dep_list[index])
-        originalGT = np.load(self.originalGT_list[index])
-        shiftedGT = np.load(self.shiftedGT_list[index])
 img = torch.FloatTensor(1).cuda()
 dep = torch.FloatTensor(1).cuda()
 originalGT = torch.FloatTensor(1).cuda()
@@ -76,16 +72,21 @@ for epoch in range(1, num_epochs + 1):
 
         optimizer.zero_grad()
         model = model.train()
-        pred_offset, scores = model(img, dep)
+        pred_offset, scores, img_, imgfeat = model(img, dep)
+        #img_, imgfeat = model(img, dep)
+
 
         loss = 0
         n = 400
 
         # Unsupervised loss
-        loss = regressor(pred_offset, shiftedGT).mean(dim=(2, 3)) * scores - 0.1 * torch.log(scores)
-        loss = loss.sum(dim=1) / n
-        loss = loss.sum(dim=0) / batch_size
+        # print('imgfeat', imgfeat)
+        # print('pred_offset', pred_offset)
+        # print('scores', scores)
 
+        loss = regressor(pred_offset, shiftedGT).mean(dim=(1, 2)).view(batch_size, -1) * scores - 0.1 * torch.log(scores)
+        # loss = loss.sum(dim=1) / n
+        loss = loss.sum(dim=0) / batch_size
         loss_temp += loss.item()
         loss_epoch += loss.item()
 

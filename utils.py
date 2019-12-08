@@ -12,7 +12,7 @@ import torch
 from torch.utils.data.sampler import Sampler
 import torch.nn as nn
 
-from nuscenes import * 
+from nuscenes import NuScenesExplorer 
 from nuscenes.utils.data_classes import LidarPointCloud, Box
 from nuscenes.utils.geometry_utils import view_points
 
