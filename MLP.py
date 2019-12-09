@@ -121,7 +121,7 @@ class Fusion(nn.Module):
         self.img_conv2 = ResNet50Bottom(models.resnet50(pretrained=True))
 
         #self.dep_model = models.resnet50(pretrained=False)
-        self.dep_conv2 = ResNet50Bottom(models.resnet50(pretrained=True))
+        self.dep_conv2 = ResNet50Bottom(models.resnet50(pretrained=False))
 
         self.fc1 = nn.Linear(4096, 512)
         self.fc2 = nn.Linear(512, 128)
@@ -168,4 +168,4 @@ class Fusion(nn.Module):
         #s_range = scores.max(dim=1)[0] - scores.min(dim=1)[0]
         #s_range = s_range.view(batch_size, -1)
         #scores = scores / s_range
-        return offset, scores, img, depfeat_copy
+        return offset, scores

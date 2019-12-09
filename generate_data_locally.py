@@ -34,8 +34,9 @@ import cv2
 
 
 if __name__ == '__main__':
-    data_path = "/home/fengjia/data/sets/nuscenes"
-    save_path = "/home/fengjia/data/sets/nuscenes_local"
+    data_path = r"/home/fengjia/data/sets/nuscenes"
+    # save_path = r"/home/fengjia/data/sets/nuscenes_local/vehicle"
+    save_path = r"/home/fengjia/data/sets/nuscenes_local/human"
     if not os.path.isdir(save_path):
         print('save path not exist')
         exit(0)
@@ -74,7 +75,7 @@ if __name__ == '__main__':
                 continue
             bottom_left = [np.int(ori_corners[0].min()), np.int(ori_corners[1].min())]
             top_right = [np.int(ori_corners[0].max()), np.int(ori_corners[1].max())]
-            if not(box.name.split('.')[0] == 'vehicle'):
+            if not(box.name.split('.')[0] == 'human'):
                 continue
             # Find the crop area of the box
             width = ori_corners[0].max() - ori_corners[0].min()
@@ -114,7 +115,9 @@ if __name__ == '__main__':
 
             # Get corresponding point cloud for the crop
             points, depth, im_ = explorer.map_pointcloud_to_image(lidar_token, im_token)
-            u, v = im.shape[:2]
+            u = top_right[0] - bottom_left[0]
+            v = top_right[1] - bottom_left[1]
+
             dep = np.zeros((u, v))
 
             min_d = 1.5
@@ -137,25 +140,33 @@ if __name__ == '__main__':
             crop_dep[1, :, :] = dep[:, :]
             crop_dep[2, :, :] = dep[:, :]
             # dep = np.transpose(dep, (2, 0, 1))
-            if counter > 2000:
-                exit(0)
-                counter += 1
-                continue
+            #if counter > 8000:
+            #    exit(0)
+            #    counter += 1
+            #    continue
 
+            # crop_dep[0, :, :] = (crop_dep[0, :, :] - np.mean(crop_dep[0, :, :])) / np.std(crop_dep[0, :, :])
+            # crop_dep[1, :, :] = (crop_dep[1, :, :] - np.mean(crop_dep[1, :, :])) / np.std(crop_dep[1, :, :])
+            # crop_dep[2, :, :] = (crop_dep[2, :, :] - np.mean(crop_dep[2, :, :])) / np.std(crop_dep[2, :, :])
+            # crop_dep[0, :, :] = (crop_dep[0, :, :] * 0.229) + 0.485
+            # crop_dep[1, :, :] = (crop_dep[1, :, :] * 0.224) + 0.456
+            # crop_dep[2, :, :] = (crop_dep[2, :, :] * 0.225) + 0.406
 
-            crop_dep[0, :, :] = (crop_dep[0, :, :] - np.mean(crop_dep[0, :, :])) / np.std(crop_dep[0, :, :])
-            crop_dep[1, :, :] = (crop_dep[1, :, :] - np.mean(crop_dep[1, :, :])) / np.std(crop_dep[1, :, :])
-            crop_dep[2, :, :] = (crop_dep[2, :, :] - np.mean(crop_dep[2, :, :])) / np.std(crop_dep[2, :, :])
-            crop_dep[0, :, :] = (crop_dep[0, :, :] * 0.229) + 0.485
-            crop_dep[1, :, :] = (crop_dep[1, :, :] * 0.224) + 0.456
-            crop_dep[2, :, :] = (crop_dep[2, :, :] * 0.225) + 0.406
+            Rx = size / v
+            Ry = size / u
+
+            shifted_corners[0, :] = shifted_corners[0, :] * Rx
+            shifted_corners[1, :] = shifted_corners[1, :] * Ry
+
             print('min_v, max_v', min_v, max_v)
             print('mean, std',crop_img.mean(), crop_img.std())
             print('mean, std',crop_dep.mean(), crop_dep.std())
+
             np.save(os.path.join(save_path, 'img_{}'.format(counter)), crop_img)
             np.save(os.path.join(save_path, 'dep_{}'.format(counter)), crop_dep)
             np.save(os.path.join(save_path, 'originalGT_{}'.format(counter)), ori_corners)
             np.save(os.path.join(save_path, 'shiftedGT_{}'.format(counter)), shifted_corners)
+            np.save(os.path.join(save_path, 'originalSize_{}'.format(counter)), np.array([u, v]))
             print('saving number {}'.format(counter))
             counter += 1
     print(counter)
