@@ -22,7 +22,7 @@ nusc_iters_per_epoch = int(len(nusc_set) / batch_size)
 
 # model = MLP_Dense(k = 1, feature_transform = False)
 model = MLP_Dense()
-weight_path = os.path.join(r'./trained_model/2019_12_08__2', 'Epoch:100_loss:3.173456151294708')
+weight_path = os.path.join(r'./trained_model/2019_12_08__3', 'Epoch:100_loss:3.2529239106178283')
 model.load_state_dict(torch.load(weight_path))
 model.cuda()
 

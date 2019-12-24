@@ -140,8 +140,8 @@ if __name__ == '__main__':
             crop_dep[1, :, :] = dep[:, :]
             crop_dep[2, :, :] = dep[:, :]
             # dep = np.transpose(dep, (2, 0, 1))
-            #if counter > 8000:
-            #    exit(0)
+            if counter > 5:
+                exit(0)
             #    counter += 1
             #    continue
 

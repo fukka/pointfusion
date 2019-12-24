@@ -25,8 +25,8 @@ def draw_box_matlab(ax, corners, color):
 
 if __name__ == '__main__':
     # root = r'/home/fengjia/data/sets/nuscenes_local/vehicle'
-    root = r'/home/fengjia/data/sets/nuscenes_local/human'
-    for i in range(70):
+    root = r'/home/fengjia/data/sets/nuscenes_local/vehicle'
+    for i in range(20):
         i += 0
         print(i)
         normalized_img = np.load(os.path.join(root, 'img_{}.npy'.format(i)))
@@ -34,6 +34,8 @@ if __name__ == '__main__':
         _, ax = plt.subplots(1, 1)
         ax.imshow(normalized_img)
         shiftedGT = np.load(os.path.join(root, 'shiftedGT_{}.npy'.format(i)))
+        originalGT = np.load(os.path.join(root, 'originalGT_{}.npy'.format(i)))
+        print(originalGT)
 
         predOffset = np.load(os.path.join(root, 'predOffset_{}.npy'.format(i)))
         predOffset = predOffset.transpose((1, 0))
@@ -45,5 +47,5 @@ if __name__ == '__main__':
         c = np.array([0, 1, 0])
         color = (c, c, c)
         draw_box_matlab(ax, predOffset, color)
-        plt.show()
+        # plt.show()
 

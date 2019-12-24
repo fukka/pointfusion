@@ -14,12 +14,12 @@ nusc_classes = ['__background__',
                 'pedestrian', 'barrier', 'trafficcone', 'bicycle', 'bus', 'car', 'construction', 'motorcycle',
                 'trailer', 'truck']
 
-batch_size = 4
+batch_size = 32
 nusc_set = local_dataloader(batch_size, len(nusc_classes), training=True)
 nusc_dataloader = torch.utils.data.DataLoader(nusc_set, batch_size=batch_size, shuffle=True)
 nusc_iters_per_epoch = int(len(nusc_set) / batch_size)
 
-num_epochs = 100
+num_epochs = 200
 
 # model = MLP_Dense(k = 1, feature_transform = False)
 model = MLP_Dense()
@@ -41,7 +41,7 @@ originalGT = Variable(originalGT)
 shiftedGT = Variable(shiftedGT)
 
 
-date = '2019_12_08__2'
+date = '2019_12_08__4'
 
 out_dir = os.path.dirname(os.path.abspath(__file__))
 output_dir = out_dir + '/trained_model/' + date
