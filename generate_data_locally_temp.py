@@ -38,7 +38,8 @@ def get_gt(nusc, corners, camera_token, pointsensor_token):
     pointsensor = nusc.get('sample_data', pointsensor_token)
     pcl_path = os.path.join(nusc.dataroot, pointsensor['filename'])
     # im = Image.open(os.path.join(nusc.dataroot, cam['filename']))
-    pc = corners
+    print(corners)
+    pc = LidarPointCloud(corners)
 
     # Points live in the point sensor frame. So they need to be transformed via global to the image plane.
     # First step: transform the point-cloud to the ego vehicle frame for the timestamp of the sweep.
@@ -86,6 +87,8 @@ def get_gt(nusc, corners, camera_token, pointsensor_token):
     return points, coloring, im
 
 
+
+
 if __name__ == '__main__':
     data_path = r"/home/fengjia/data/sets/nuscenes"
     # save_path = r"/home/fengjia/data/sets/nuscenes_local/vehicle"
@@ -94,7 +97,7 @@ if __name__ == '__main__':
         print('save path not exist')
         exit(0)
 
-    ç = NuScenes(version='v1.0-trainval', dataroot=data_path, verbose=True)
+    nusc = NuScenes(version='v1.0-trainval', dataroot=data_path, verbose=True)
     explorer = NuScenesExplorer(nusc)
 
     PATH = data_path + '/CAMFRONT.txt'
@@ -126,7 +129,7 @@ if __name__ == '__main__':
             sd_record = nusc.get('sample_data', im_token)
             cs_record = nusc.get('calibrated_sensor', sd_record['calibrated_sensor_token'])
             sensor_record = nusc.get('sensor', cs_record['sensor_token'])
-            ori_corners_ = get_gt(nusc=nusc, corners=box.corners(), camera_token=sensor_record, pointsensor_token=lidar_token)
+            ori_corners_ = get_gt(nusc=nusc, corners=box.corners(), camera_token=im_token, pointsensor_token=lidar_token)
 
 
             ori_corners = view_points(box.corners(), view=np.array(img_camera_intrinsic, copy=True), normalize=True)
