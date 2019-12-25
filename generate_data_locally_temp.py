@@ -34,11 +34,11 @@ import cv2
 import os.path as osp
 
 
-def map_pointcloud_to_image(self,
+def map_pointcloud_to_image(nusc,
                             pointsensor_token: str,
                             camera_token: str,
                             min_dist: float = 1.0,
-                            render_intensity: bool = False) -> Tuple:
+                            render_intensity: bool = False):
     """
     Given a point sensor (lidar/radar) token and camera sample_data token, load point-cloud and map it to the image
     plane.
@@ -48,32 +48,31 @@ def map_pointcloud_to_image(self,
     :param render_intensity: Whether to render lidar intensity instead of point depth.
     :return (pointcloud <np.float: 2, n)>, coloring <np.float: n>, image <Image>).
     """
-    cam = self.nusc.get('sample_data', camera_token)
-    pointsensor = self.nusc.get('sample_data', pointsensor_token)
-    pcl_path = osp.join(self.nusc.dataroot, pointsensor['filename'])
+    cam = nusc.get('sample_data', camera_token)
+    pointsensor = nusc.get('sample_data', pointsensor_token)
+    pcl_path = osp.join(nusc.dataroot, pointsensor['filename'])
     if pointsensor['sensor_modality'] == 'lidar':
         pc = LidarPointCloud.from_file(pcl_path)
-        print(pc.points)
-    im = Image.open(osp.join(self.nusc.dataroot, cam['filename']))
+    im = Image.open(osp.join(nusc.dataroot, cam['filename']))
 
     # Points live in the point sensor frame. So they need to be transformed via global to the image plane.
     # First step: transform the point-cloud to the ego vehicle frame for the timestamp of the sweep.
-    cs_record = self.nusc.get('calibrated_sensor', pointsensor['calibrated_sensor_token'])
+    cs_record = nusc.get('calibrated_sensor', pointsensor['calibrated_sensor_token'])
     pc.rotate(Quaternion(cs_record['rotation']).rotation_matrix)
     pc.translate(np.array(cs_record['translation']))
 
     # Second step: transform to the global frame.
-    poserecord = self.nusc.get('ego_pose', pointsensor['ego_pose_token'])
+    poserecord = nusc.get('ego_pose', pointsensor['ego_pose_token'])
     pc.rotate(Quaternion(poserecord['rotation']).rotation_matrix)
     pc.translate(np.array(poserecord['translation']))
 
     # Third step: transform into the ego vehicle frame for the timestamp of the image.
-    poserecord = self.nusc.get('ego_pose', cam['ego_pose_token'])
+    poserecord = nusc.get('ego_pose', cam['ego_pose_token'])
     pc.translate(-np.array(poserecord['translation']))
     pc.rotate(Quaternion(poserecord['rotation']).rotation_matrix.T)
 
     # Fourth step: transform into the camera.
-    cs_record = self.nusc.get('calibrated_sensor', cam['calibrated_sensor_token'])
+    cs_record = nusc.get('calibrated_sensor', cam['calibrated_sensor_token'])
     pc.translate(-np.array(cs_record['translation']))
     pc.rotate(Quaternion(cs_record['rotation']).rotation_matrix.T)
 
@@ -117,7 +116,6 @@ def get_gt(nusc, corners, camera_token, pointsensor_token):
     pointsensor = nusc.get('sample_data', pointsensor_token)
     pcl_path = os.path.join(nusc.dataroot, pointsensor['filename'])
     # im = Image.open(os.path.join(nusc.dataroot, cam['filename']))
-    print(corners)
     pc = LidarPointCloud(corners)
 
     # Points live in the point sensor frame. So they need to be transformed via global to the image plane.
@@ -154,14 +152,14 @@ def get_gt(nusc, corners, camera_token, pointsensor_token):
     # Remove points that are either outside or behind the camera. Leave a margin of 1 pixel for aesthetic reasons.
     # Also make sure points are at least 1m in front of the camera to avoid seeing the lidar points on the camera
     # casing for non-keyframes which are slightly out of sync.
-    mask = np.ones(depths.shape[0], dtype=bool)
-    mask = np.logical_and(mask, depths > min_dist)
-    mask = np.logical_and(mask, points[0, :] > 1)
-    mask = np.logical_and(mask, points[0, :] < im.size[0] - 1)
-    mask = np.logical_and(mask, points[1, :] > 1)
-    mask = np.logical_and(mask, points[1, :] < im.size[1] - 1)
-    points = points[:, mask]
-    coloring = coloring[mask]
+    # mask = np.ones(depths.shape[0], dtype=bool)
+    # mask = np.logical_and(mask, depths > min_dist)
+    # mask = np.logical_and(mask, points[0, :] > 1)
+    # mask = np.logical_and(mask, points[0, :] < im.size[0] - 1)
+    # mask = np.logical_and(mask, points[1, :] > 1)
+    # mask = np.logical_and(mask, points[1, :] < im.size[1] - 1)
+    # points = points[:, mask]
+    # coloring = coloring[mask]
 
     return points, coloring, im
 
@@ -205,13 +203,16 @@ if __name__ == '__main__':
             if (vis_level != 3) and (vis_level != 4):
                 continue
 
-            # ori_corners_ = get_gt(nusc=nusc, corners=box.corners(), camera_token=im_token, pointsensor_token=lidar_token)
+            corners_4dim = np.ones((4, box.corners().shape[1]))
+            corners_4dim[:3, :] = box.corners()[:, :]
+            ori_corners_ = get_gt(nusc=nusc, corners=np.array(corners_4dim, copy=True), camera_token=im_token, pointsensor_token=lidar_token)
 
 
             ori_corners = view_points(box.corners(), view=np.array(img_camera_intrinsic, copy=True), normalize=True)
 
 
-            # print(counter, ori_corners, ori_corners_)
+            #print(counter, ori_corners, ori_corners_[0])
+
 
 
             if not(((ori_corners[0].max() - ori_corners[0].min()) > 64) and (
@@ -219,8 +220,9 @@ if __name__ == '__main__':
                 continue
             bottom_left = [np.int(ori_corners[0].min()), np.int(ori_corners[1].min())]
             top_right = [np.int(ori_corners[0].max()), np.int(ori_corners[1].max())]
-            if not(box.name.split('.')[0] == 'human'):
+            if not(box.name.split('.')[0] == 'vehicle'):
                 continue
+            print(box.corners()[2, :])
             # Find the crop area of the box
             width = ori_corners[0].max() - ori_corners[0].min()
             height = ori_corners[1].max() - ori_corners[1].min()
@@ -245,20 +247,22 @@ if __name__ == '__main__':
             size = 256
             scale = size / side
             scaled = cv2.resize(crop_img, (size, size))
-            crop_img = np.transpose(scaled, (2, 0, 1))
-            crop_img = crop_img.astype(np.float32)
-            crop_img /= 255
+            #crop_img = np.transpose(scaled, (2, 0, 1))
+            #crop_img = crop_img.astype(np.float32)
+            #crop_img /= 255
 
 
-            crop_img[0, :, :] = (crop_img[0, :, :] - np.mean(crop_img[0, :, :])) / np.std(crop_img[0, :, :])
-            crop_img[1, :, :] = (crop_img[1, :, :] - np.mean(crop_img[1, :, :])) / np.std(crop_img[1, :, :])
-            crop_img[2, :, :] = (crop_img[2, :, :] - np.mean(crop_img[2, :, :])) / np.std(crop_img[2, :, :])
-            crop_img[0, :, :] = (crop_img[0, :, :] * 0.229) + 0.485
-            crop_img[1, :, :] = (crop_img[1, :, :] * 0.224) + 0.456
-            crop_img[2, :, :] = (crop_img[2, :, :] * 0.225) + 0.406
+            #crop_img[0, :, :] = (crop_img[0, :, :] - np.mean(crop_img[0, :, :])) / np.std(crop_img[0, :, :])
+            #crop_img[1, :, :] = (crop_img[1, :, :] - np.mean(crop_img[1, :, :])) / np.std(crop_img[1, :, :])
+            #crop_img[2, :, :] = (crop_img[2, :, :] - np.mean(crop_img[2, :, :])) / np.std(crop_img[2, :, :])
+            #crop_img[0, :, :] = (crop_img[0, :, :] * 0.229) + 0.485
+            #crop_img[1, :, :] = (crop_img[1, :, :] * 0.224) + 0.456
+            #crop_img[2, :, :] = (crop_img[2, :, :] * 0.225) + 0.406
 
             # Get corresponding point cloud for the crop
             points, depth, im_ = explorer.map_pointcloud_to_image(lidar_token, im_token)
+            # points_, depth_, im_ = map_pointcloud_to_image(nusc, lidar_token, im_token)
+            # print(points==points_, depth==depth_)
             u = top_right[0] - bottom_left[0]
             v = top_right[1] - bottom_left[1]
 
@@ -268,13 +272,20 @@ if __name__ == '__main__':
             max_d = 104.5
             for i in range(points.shape[1]):
                 if points[1, i] > bottom_left[1] and points[1, i] < top_right[1]-1 and points[0, i] > bottom_left[0] and points[0, i] < top_right[0]-1:
-                    normalized_depth = (depth[i] - min_d) / (max_d - min_d)
+                    # normalized_depth = (depth[i] - min_d) / (max_d - min_d)
+                    normalized_depth = depth[i]
                     dep[int(points[1, i]-bottom_left[1]), int(points[0, i]-bottom_left[0])] = normalized_depth
+                    crop_img[int(points[1, i] - bottom_left[1])-5:int(points[1, i] - bottom_left[1])+5,
+                    int(points[0, i] - bottom_left[0])-5:int(points[0, i] - bottom_left[0])+5, :] = normalized_depth
                     if normalized_depth > max_v:
                         max_v = normalized_depth
                     if normalized_depth < min_v:
                         min_v = normalized_depth
-
+            print(min_v, max_v)
+            import matplotlib.pyplot as mlt
+            mlt.Figure()
+            mlt.imshow(crop_img)
+            mlt.show()
             if np.count_nonzero(dep) < 400:
                 continue
 
