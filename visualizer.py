@@ -25,7 +25,7 @@ def draw_box_matlab(ax, corners, color):
 
 if __name__ == '__main__':
     # root = r'/home/fengjia/data/sets/nuscenes_local/vehicle'
-    root = r'/home/fengjia/data/sets/nuscenes_local/vehicle'
+    root = r'/home/fengjia/data/sets/nuscenes_temp/vehicle'
     for i in range(20):
         i += 0
         print(i)
@@ -38,7 +38,7 @@ if __name__ == '__main__':
         print(originalGT)
 
         predOffset = np.load(os.path.join(root, 'predOffset_{}.npy'.format(i)))
-        predOffset = predOffset.transpose((1, 0))
+        #predOffset = predOffset.transpose((1, 0))
 
         c = np.array([1,0,0])
         color = (c, c, c)
@@ -47,5 +47,5 @@ if __name__ == '__main__':
         c = np.array([0, 1, 0])
         color = (c, c, c)
         draw_box_matlab(ax, predOffset, color)
-        # plt.show()
+        plt.show()
 

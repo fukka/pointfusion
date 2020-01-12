@@ -2,7 +2,7 @@ import glob
 from matplotlib import pyplot as plt
 
 if __name__ == '__main__':
-    l = glob.glob(r'/home/fengjia/pointfusion/trained_model/2019_12_08__3/*')
+    l = glob.glob(r'/home/fengjia/pointfusion/trained_model/2020_01_09__1/*')
     epoch_id = []
     training_loss = []
     for f in l:

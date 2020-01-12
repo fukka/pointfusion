@@ -131,8 +131,11 @@ class local_dataloader(data.Dataset):
         self.dep_list = []
         self.originalGT_list = []
         self.shiftedGT_list = []
+        self.offSet_list = []
+        self.cameraMatrix_list = []
+        self.cameraFrameBox_list = []
 
-        data_path = r'/home/fengjia/data/sets/nuscenes_local/vehicle'
+        data_path = r'/home/fengjia/data/sets/nuscenes_temp/vehicle'
         img_list = glob.glob(os.path.join(data_path, 'img_*'))
         img_list.sort(key=lambda s:int(s.split('_')[-1].split('.')[0]))
         img_list = img_list[:5000]
@@ -144,6 +147,9 @@ class local_dataloader(data.Dataset):
             self.dep_list.append(img.replace('img', 'dep'))
             self.originalGT_list.append(img.replace('img', 'originalGT'))
             self.shiftedGT_list.append(img.replace('img', 'shiftedGT'))
+            self.offSet_list.append(img.replace('img', 'offSet'))
+            self.cameraMatrix_list.append(img.replace('img', 'cameraMatrix'))
+            self.cameraFrameBox_list.append(img.replace('img', 'cameraFrameBox'))
 
 
     def __getitem__(self, index):
@@ -151,9 +157,12 @@ class local_dataloader(data.Dataset):
         dep = np.load(self.dep_list[index])
         originalGT = np.load(self.originalGT_list[index])
         shiftedGT = np.load(self.shiftedGT_list[index])
-        originalGT = originalGT.transpose((1, 0))
-        shiftedGT = shiftedGT.transpose((1, 0))
-        return img, dep, originalGT, shiftedGT, self.img_list[index]
+        #originalGT = originalGT.transpose((1, 0))
+        #shiftedGT = shiftedGT.transpose((1, 0))
+        offSet = np.load(self.offSet_list[index])
+        cameraMatrix = np.load(self.cameraMatrix_list[index])
+        cameraFrameBox = np.load(self.cameraFrameBox_list[index])
+        return img, dep, originalGT, shiftedGT, offSet, cameraMatrix, cameraFrameBox, self.img_list[index]
 
     def __len__(self):
         return len(self.img_list)

@@ -22,7 +22,8 @@ nusc_iters_per_epoch = int(len(nusc_set) / batch_size)
 
 # model = MLP_Dense(k = 1, feature_transform = False)
 model = MLP_Dense()
-weight_path = os.path.join(r'./trained_model/2019_12_08__3', 'Epoch:100_loss:3.2529239106178283')
+weight_path = os.path.join(r'./trained_model/2020_01_09__1', 'Epoch:70_loss:0.29883947529089755')
+print(os.path.isfile(weight_path))
 model.load_state_dict(torch.load(weight_path))
 model.cuda()
 
@@ -30,15 +31,21 @@ img = torch.FloatTensor(1).cuda()
 dep = torch.FloatTensor(1).cuda()
 originalGT = torch.FloatTensor(1).cuda()
 shiftedGT = torch.FloatTensor(1).cuda()
+offSet = torch.FloatTensor(1).cuda()
+cameraMatrix = torch.FloatTensor(1).cuda()
+cameraFrameBox = torch.FloatTensor(1).cuda()
 
 
 img = Variable(img)
 dep = Variable(dep)
 originalGT = Variable(originalGT)
 shiftedGT = Variable(shiftedGT)
+offSet = Variable(offSet)
+cameraMatrix = Variable(cameraMatrix)
+cameraFrameBox = Variable(cameraFrameBox)
 
 
-output_dir = r'/home/fengjia/data/sets/nuscenes_local/human'
+output_dir = r'/home/fengjia/data/sets/nuscenes_temp/vehicle'
 if not os.path.exists(output_dir):
     print('path incorrect')
     exit(0)
@@ -53,14 +60,18 @@ for step in range(nusc_iters_per_epoch):
         dep.resize_(data[1].size()).copy_(data[1])
         originalGT.resize_(data[2].size()).copy_(data[2])
         shiftedGT.resize_(data[3].size()).copy_(data[3])
+        offSet.resize_(data[4].size()).copy_(data[4])
+        cameraMatrix.resize_(data[5].size()).copy_(data[5])
+        cameraFrameBox.resize_(data[6].size()).copy_(data[6])
         #name.resize_(data[4].size()).copy_(data[4])
 
         model = model.eval()
-        pred_offset, scores = model(img, dep)
+        pred_offset, scores = model(img, dep, offSet, cameraMatrix)
         pred_offset = pred_offset.cpu()
+        #data = data.cpu()
         for i in range(batch_size):
             pred_offset_i = pred_offset[i, :, :]
-            np.save(data[4][i].replace('img', 'predOffset'), pred_offset_i)
+            np.save(data[7][i].replace('img', 'predOffset'), pred_offset_i)
             #np.save(os.path.join(output_dir, 'predOffset_{}'.format(counter)), pred_offset_i)
             print('counter', counter)
             counter += 1

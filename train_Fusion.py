@@ -7,6 +7,7 @@ from dataloader import local_dataloader
 import numpy as np
 
 import os
+from convert_back import convert_back
 
 logger = Logger('./logs/Dense_Resnet')
 
@@ -33,15 +34,20 @@ img = torch.FloatTensor(1).cuda()
 dep = torch.FloatTensor(1).cuda()
 originalGT = torch.FloatTensor(1).cuda()
 shiftedGT = torch.FloatTensor(1).cuda()
+offSet = torch.FloatTensor(1).cuda()
+cameraMatrix = torch.FloatTensor(1).cuda()
+cameraFrameBox = torch.FloatTensor(1).cuda()
 
 
 img = Variable(img)
 dep = Variable(dep)
 originalGT = Variable(originalGT)
 shiftedGT = Variable(shiftedGT)
+offSet = Variable(offSet)
+cameraMatrix = Variable(cameraMatrix)
+cameraFrameBox = Variable(cameraFrameBox)
 
-
-date = '2019_12_08__4'
+date = '2020_01_09__2'
 
 out_dir = os.path.dirname(os.path.abspath(__file__))
 output_dir = out_dir + '/trained_model/' + date
@@ -60,16 +66,21 @@ for epoch in range(1, num_epochs + 1):
             dep.resize_(data[1].size()).copy_(data[1])
             originalGT.resize_(data[2].size()).copy_(data[2])
             shiftedGT.resize_(data[3].size()).copy_(data[3])
+            offSet.resize_(data[4].size()).copy_(data[4])
+            cameraMatrix.resize_(data[5].size()).copy_(data[5])
+            cameraFrameBox.resize_(data[6].size()).copy_(data[6])
 
         optimizer.zero_grad()
         model = model.train()
-        pred_offset, scores = model(img, dep)
+        pred_offset, scores = model(img, dep, offSet, cameraMatrix)
 
         loss = 0
 
         # Unsupervised loss
         # loss = regressor(pred_offset, shiftedGT).mean(dim=(1, 2)).view(batch_size, -1) * scores - 0.1 * torch.log(scores)
-        loss = regressor(pred_offset, shiftedGT).mean(dim=(1, 2)).view(batch_size, -1)
+        # loss = regressor(pred_offset, shiftedGT).mean(dim=(1, 2)).view(batch_size, -1)
+        loss = regressor(convert_back(pred_offset, offSet, cameraMatrix), cameraFrameBox).mean(dim=(1, 2)).view(batch_size, -1) \
+               + regressor(pred_offset, shiftedGT).mean(dim=(1, 2)).view(batch_size, -1)
 
         loss = loss.sum(dim=0) / batch_size
         loss_temp += loss.item()
@@ -83,9 +94,9 @@ for epoch in range(1, num_epochs + 1):
         p_offset = np.zeros((4, 8, 3))
         anchor_points = np.zeros((4, 3))
         truth_boxes = np.zeros((4, 8, 3))
-        for i in range(0, 4):
-            p_offset[i] = pred_offset[i][max_inds[i]].cpu().detach().numpy()
-            truth_boxes[i] = shiftedGT[i].cpu().numpy()
+        #for i in range(0, 4):
+        #    p_offset[i] = pred_offset[i][max_inds[i]].cpu().detach().numpy()
+        #    truth_boxes[i] = shiftedGT[i].cpu().numpy()
 
         # visualize_result(p_offset, anchor_points, truth_boxes)
         if step % 10 == 0 and step != 0:

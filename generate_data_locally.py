@@ -29,7 +29,7 @@ import matplotlib.cm as cm
 from mpl_toolkits.mplot3d import Axes3D
 
 # from utils import get_pointcloud, modified_map_pointcloud_to_image
-
+import json
 import cv2 
 
 
@@ -37,6 +37,7 @@ if __name__ == '__main__':
     data_path = r"/home/fengjia/data/sets/nuscenes"
     # save_path = r"/home/fengjia/data/sets/nuscenes_local/vehicle"
     save_path = r"/home/fengjia/data/sets/nuscenes_temp/vehicle"
+
     if not os.path.isdir(save_path):
         print('save path not exist')
         exit(0)
@@ -53,6 +54,7 @@ if __name__ == '__main__':
     counter = 0
     max_v = 0
     min_v = 999999
+    json_data = []
     # pdb.set_trace()
     for im_token in image_token:
         sample_data = nusc.get('sample_data', im_token)
@@ -64,18 +66,23 @@ if __name__ == '__main__':
 
         # get ground truth boxes
         _, boxes, img_camera_intrinsic = nusc.get_sample_data(im_token, box_vis_level=BoxVisibility.ALL)
+        sd_record = nusc.get('sample_data', im_token)
+        cs_record = nusc.get('calibrated_sensor', sd_record['calibrated_sensor_token'])
+        sensor_record = nusc.get('sensor', cs_record['sensor_token'])
+
         for box in boxes:
             visibility_token = nusc.get('sample_annotation', box.token)['visibility_token']
             vis_level = int(nusc.get('visibility', visibility_token)['token'])
             if (vis_level != 3) and (vis_level != 4):
                 continue
             ori_corners = view_points(box.corners(), view=np.array(img_camera_intrinsic, copy=True), normalize=True)
+            ori_corners[2, :] = box.corners()[2, :]
             if not(((ori_corners[0].max() - ori_corners[0].min()) > 64) and (
                     (ori_corners[1].max() - ori_corners[1].min()) > 64)):
                 continue
             bottom_left = [np.int(ori_corners[0].min()), np.int(ori_corners[1].min())]
             top_right = [np.int(ori_corners[0].max()), np.int(ori_corners[1].max())]
-            if not(box.name.split('.')[0] == 'human'):
+            if not(box.name.split('.')[0] == 'vehicle'):
                 continue
             # Find the crop area of the box
             width = ori_corners[0].max() - ori_corners[0].min()
@@ -99,7 +106,6 @@ if __name__ == '__main__':
 
             # Scale to same size
             size = 256
-            scale = size / side
             scaled = cv2.resize(crop_img, (size, size))
             crop_img = np.transpose(scaled, (2, 0, 1))
             crop_img = crop_img.astype(np.float32)
@@ -124,7 +130,8 @@ if __name__ == '__main__':
             max_d = 104.5
             for i in range(points.shape[1]):
                 if points[1, i] > bottom_left[1] and points[1, i] < top_right[1]-1 and points[0, i] > bottom_left[0] and points[0, i] < top_right[0]-1:
-                    normalized_depth = (depth[i] - min_d) / (max_d - min_d)
+                    # normalized_depth = (depth[i] - min_d) / (max_d - min_d)
+                    normalized_depth = depth[i]
                     dep[int(points[1, i]-bottom_left[1]), int(points[0, i]-bottom_left[0])] = normalized_depth
                     if normalized_depth > max_v:
                         max_v = normalized_depth
@@ -140,8 +147,8 @@ if __name__ == '__main__':
             crop_dep[1, :, :] = dep[:, :]
             crop_dep[2, :, :] = dep[:, :]
             # dep = np.transpose(dep, (2, 0, 1))
-            #if counter > 8000:
-            #    exit(0)
+            #if counter > 10:
+            #    continue
             #    counter += 1
             #    continue
 
@@ -158,15 +165,24 @@ if __name__ == '__main__':
             shifted_corners[0, :] = shifted_corners[0, :] * Rx
             shifted_corners[1, :] = shifted_corners[1, :] * Ry
 
-            print('min_v, max_v', min_v, max_v)
-            print('mean, std',crop_img.mean(), crop_img.std())
-            print('mean, std',crop_dep.mean(), crop_dep.std())
+            #print('min_v, max_v', min_v, max_v)
+            #print('mean, std',crop_img.mean(), crop_img.std())
+            #print('mean, std',crop_dep.mean(), crop_dep.std())
 
             np.save(os.path.join(save_path, 'img_{}'.format(counter)), crop_img)
             np.save(os.path.join(save_path, 'dep_{}'.format(counter)), crop_dep)
-            np.save(os.path.join(save_path, 'originalGT_{}'.format(counter)), ori_corners)
             np.save(os.path.join(save_path, 'shiftedGT_{}'.format(counter)), shifted_corners)
-            np.save(os.path.join(save_path, 'originalSize_{}'.format(counter)), np.array([u, v]))
+            offSet = np.concatenate((np.array(bottom_left), np.array(top_right)))
+            np.save(os.path.join(save_path, 'offSet_{}'.format(counter)), offSet)
+            shiftedGT = shifted_corners
+            shiftedGT[0, :] = shiftedGT[0, :] * (offSet[2] - offSet[0]) / 256 + offSet[0]
+            shiftedGT[1, :] = shiftedGT[1, :] * (offSet[3] - offSet[1]) / 256 + offSet[1]
+
+            print(shiftedGT)
+            print(ori_corners)
+            np.save(os.path.join(save_path, 'originalGT_{}'.format(counter)), ori_corners)
+            np.save(os.path.join(save_path, 'cameraMatrix_{}'.format(counter)), img_camera_intrinsic)
+            np.save(os.path.join(save_path, 'cameraFrameBox_{}'.format(counter)), box.corners())
             print('saving number {}'.format(counter))
             counter += 1
     print(counter)

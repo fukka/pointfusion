@@ -8,6 +8,7 @@ import numpy as np
 from Pointnet import PointNetfeat, STN3d
 import torchvision.models as models
 from utils import ResNet50Bottom
+from convert_back import convert_back
 
 class MLP_Global(nn.Module):
     def __init__(self):
@@ -132,26 +133,30 @@ class Fusion(nn.Module):
 
         self.apply(weights_init)
 
-    def forward(self, img, dep):
+    def forward(self, img, dep, offSet, cameraMatrix):
         batch_size = img.size()[0]
 
         imgfeat = self.img_conv2(img).view(batch_size, 1, 2048)
         #return img, imgfeat,imgfeat, imgfeat
         depfeat = self.dep_conv2(dep).view(batch_size, 1, 2048)
         #depfeat = imgfeat
-        depfeat_copy = imgfeat
+        #depfeat_copy = imgfeat
         imgfeat = F.normalize(imgfeat, p=2, dim=2)
         depfeat = F.normalize(depfeat, p=2, dim=2)
 
         # fusion
-        fusionfeat = torch.cat((imgfeat, depfeat), 2)  # 180
+        fusionfeat = torch.cat((imgfeat, depfeat), 2)
+        # fusionfeat = torch.cat((fusionfeat, offSet.view(batch_size, 1, 4)), 2)
+        # fusionfeat = torch.cat((fusionfeat, cameraMatrix.view(batch_size, 1, 9)), 2)
+        # fusionfeat = torch.cat((torch.cat(*fusionfeat, offSet.view(batch_size, 1, 4))), 2), cameraMatrix.view(batch_size, 1, 9)), 2)  # 180
 
         x = fusionfeat
         x = self.fc1(x)
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
-        offset = self.fc4(x)
-        offset = offset.view(batch_size, 8, 3)
+        pred = self.fc4(x)
+        pred = pred.view(batch_size, 3, 8)
+
         scores = self.fc5(x)
         scores = self.score_layer(scores)
         scores = scores.view(-1, 1)
@@ -168,4 +173,5 @@ class Fusion(nn.Module):
         #s_range = scores.max(dim=1)[0] - scores.min(dim=1)[0]
         #s_range = s_range.view(batch_size, -1)
         #scores = scores / s_range
-        return offset, scores
+
+        return pred, scores
